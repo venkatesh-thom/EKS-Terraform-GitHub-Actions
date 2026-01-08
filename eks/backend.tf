@@ -6,13 +6,13 @@ terraform {
       version = "~> 5.49.0"
     }
   }
+
   backend "s3" {
     bucket         = "remote-state-venkatesh-dev"
-    key            = "eks-vpc"
+    key            = "eks-vpc/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "Lock-Files"
-    #use_lockfile = true
-    encrypt = true
+    encrypt        = true
   }
 }
 
