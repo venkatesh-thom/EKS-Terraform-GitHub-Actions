@@ -1,12 +1,11 @@
-name: 'EKS-Terraform-Plan'
+name: "EKS-Terraform-Plan"
 
 on:
   push:
-    branches: 
-      - '**'
+    branches:
+      - "**"
 
-
-env: 
+env:
   AWS_REGION: us-east-1
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -31,7 +30,7 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        with: 
+        with:
           terraform_version: 1.9.3
           terraform_wrapper: true
 
