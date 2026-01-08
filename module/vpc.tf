@@ -178,7 +178,7 @@ resource "aws_security_group" "bastion_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["103.168.80.204/32"] ##My IP
+    cidr_blocks = ["103.168.80.204/32"] ## My IP FROM LATPTOP
   }
 
   egress {
@@ -216,6 +216,8 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   role = aws_iam_role.ec2_ssm_role.name
 }
 
+
+# EC2 INSTANCE [ CONNECT USING SH MANAGER]
 resource "aws_instance" "bastion" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = "t3.micro"

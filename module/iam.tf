@@ -7,6 +7,7 @@ resource "random_integer" "random_suffix" {
   max = 9999
 }
 
+# IAM ROLE FOR CLUSTER
 resource "aws_iam_role" "eks-cluster-role" {
   count = var.is_eks_role_enabled ? 1 : 0
   name  = "${local.cluster_name}-role-${random_integer.random_suffix.result}"
@@ -23,12 +24,14 @@ resource "aws_iam_role" "eks-cluster-role" {
   })
 }
 
+# IAM POLICY ATTACHEMENT
 resource "aws_iam_role_policy_attachment" "AmazonEKSClusterPolicy" {
   count      = var.is_eks_role_enabled ? 1 : 0
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
   role       = aws_iam_role.eks-cluster-role[count.index].name
 }
 
+# IAM POLICY FOR NODEGROUP
 resource "aws_iam_role" "eks-nodegroup-role" {
   count = var.is_eks_nodegroup_role_enabled ? 1 : 0
   name  = "${local.cluster_name}-nodegroup-role-${random_integer.random_suffix.result}"
@@ -45,6 +48,7 @@ resource "aws_iam_role" "eks-nodegroup-role" {
   })
 }
 
+# ATTACHING POLICY FOR NODE GROUP OF EKS, CNI, CRI , EBS 
 resource "aws_iam_role_policy_attachment" "eks-AmazonWorkerNodePolicy" {
   count      = var.is_eks_nodegroup_role_enabled ? 1 : 0
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
@@ -74,6 +78,7 @@ resource "aws_iam_role" "eks_oidc" {
   name               = "eks-oidc"
 }
 
+# IAM POLICY FOR OIDC
 resource "aws_iam_policy" "eks-oidc-policy" {
   name = "test-policy"
 
@@ -91,6 +96,7 @@ resource "aws_iam_policy" "eks-oidc-policy" {
   })
 }
 
+# OIDC POLICY FOR IAM ATTACHMENT
 resource "aws_iam_role_policy_attachment" "eks-oidc-policy-attach" {
   role       = aws_iam_role.eks_oidc.name
   policy_arn = aws_iam_policy.eks-oidc-policy.arn
