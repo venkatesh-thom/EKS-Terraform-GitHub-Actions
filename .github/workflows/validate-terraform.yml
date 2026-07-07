@@ -19,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 
-    defaults:
-      run:
-        shell: bash
-        working-directory: eks
+    # defaults:
+    #   run:
+    #     shell: bash
+    #     working-directory: eks
 
     steps:
       - name: Checkout repository
