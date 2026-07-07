@@ -1,0 +1,107 @@
+name: 'AWS EKS Terraform Pipeline deployment'
+
+# Manual workflow trigger
+on:
+  workflow_dispatch:
+    inputs:
+      tfvars_file:
+        description: 'Path to the .tfvars file'
+        required: true
+        default: 'dev.tfvars'
+
+      action:
+        type: choice
+        description: 'Terraform Action'
+        options:
+          - plan
+          - apply
+          - destroy
+        required: true
+        default: 'apply'
+
+# Environment variables
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+# Required GitHub permissions
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event.inputs.action }}
+    runs-on: ubuntu-latest
+
+    # GitHub Environment (supports approvals and environment secrets)
+    environment: production
+
+    # Uncomment only if your Terraform configuration is inside an "eks" directory.
+    # Since your Terraform files are in the repository root, keep this commented.
+    #
+    # defaults:
+    #   run:
+    #     shell: bash
+    #     working-directory: eks
+
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Install Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.3
+          terraform_wrapper: true
+
+      # Cache Terraform provider plugins to speed up future workflow runs.
+      # Do not cache the .terraform directory because it contains backend
+      # and workspace metadata that is recreated during terraform init.
+      - name: Cache Terraform Provider Plugins
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf', '.terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
+      # Initialize the Terraform working directory
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      # Check Terraform formatting
+      - name: Terraform Format Check
+        run: terraform fmt -check -diff -recursive
+
+      # Validate Terraform configuration
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Generate an execution plan
+      - name: Terraform Plan
+        if: ${{ github.event.inputs.action == 'plan' }}
+        run: |
+          terraform plan \
+            -var-file=${{ github.event.inputs.tfvars_file }} \
+            -input=false
+
+      # Create or update infrastructure
+      - name: Terraform Apply
+        if: ${{ github.event.inputs.action == 'apply' }}
+        run: |
+          terraform apply \
+            -auto-approve \
+            -var-file=${{ github.event.inputs.tfvars_file }} \
+            -input=false
+
+      # Destroy infrastructure
+      - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        run: |
+          terraform destroy \
+            -auto-approve \
+            -var-file=${{ github.event.inputs.tfvars_file }} \
+            -input=false

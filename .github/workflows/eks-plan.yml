@@ -1,4 +1,4 @@
-name: "EKS-Terraform-Plan"
+name: "AWS EKS Terraform Pipeline Plan"
 
 on:
   push:
