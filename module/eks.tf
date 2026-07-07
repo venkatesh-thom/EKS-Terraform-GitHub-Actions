@@ -42,7 +42,7 @@ resource "aws_eks_addon" "eks-addons" {
   ]
 }
 
-# NodeGroups
+# NodeGroups for EKS Cluster on-demand and spot instances
 resource "aws_eks_node_group" "ondemand-node" {
   cluster_name    = aws_eks_cluster.eks[0].name
   node_group_name = "${var.cluster_name}-on-demand-nodes"

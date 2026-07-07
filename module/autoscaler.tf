@@ -4,7 +4,6 @@ data "tls_certificate" "eks" {
 }
 
 
-
 # OIDC Provider
 resource "aws_iam_openid_connect_provider" "eks-oidc" {
   client_id_list  = ["sts.amazonaws.com"]
@@ -33,6 +32,7 @@ resource "aws_iam_role" "cluster_autoscaler" {
   })
 }
 
+## IAM Policy for Cluster Autoscaler
 resource "aws_iam_policy" "cluster_autoscaler" {
   name = "EKSClusterAutoscalerPolicy"
 
