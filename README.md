@@ -1,4 +1,4 @@
-# 🚀 Configuring Production-Ready EKS Clusters with Terraform and GitHub Actions
+# 🚀 Configuring Production-Ready EKS AutoClusters with Terraform and GitHub Actions
 
 
 ![EKS- GitHub Actions- Terraform](assets/Presentation1.gif)
