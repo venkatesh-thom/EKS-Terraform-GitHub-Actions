@@ -14,7 +14,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "venkatesh-remote"
+    bucket         = "venkatesh-01a73d48"
     key            = "eks-vpc/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "Lock-Files"
