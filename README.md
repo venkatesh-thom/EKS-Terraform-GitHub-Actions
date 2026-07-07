@@ -1,66 +1,137 @@
-# 🚀 Configuring Production-Ready EKS AutoClusters with Terraform and GitHub Actions
+# 🚀 Production-Ready Amazon EKS with Terraform & GitHub Actions
 
+![EKS - GitHub Actions - Terraform](assets/Presentation1.gif)
 
-![EKS- GitHub Actions- Terraform](assets/Presentation1.gif)
+## 📖 Overview
 
+This project demonstrates how to provision a **production-ready Amazon EKS (Elastic Kubernetes Service)** cluster using **Terraform** and automate infrastructure deployments through **GitHub Actions**.
 
-## 🌟 Overview
-
-This project covers:
-- **Infrastructure as Code (IaC)**: Use Terraform to define and manage your EKS cluster.
-- **CI/CD Automation**: Leverage GitHub Actions to automate deployments.
-# GitHub-Hosted Runner with AWS OIDC Flow
+The solution follows Infrastructure as Code (IaC) principles and modern CI/CD practices using GitHub-hosted runners and AWS authentication via OpenID Connect (OIDC).
 
 ---
 
-This document explains the authentication flow for **GitHub-hosted runners** accessing AWS resources via **OIDC (OpenID Connect)**.
+## ✨ Features
 
-
-When using **GitHub-hosted runners**, the runners are ephemeral and **do not have AWS credentials** by default. 
-
-To authenticate with AWS, the runner uses an **OIDC token issued by GitHub** to assume a specific **IAM role**.
-
----
-
-## Architecture Diagram
-
-``` bash
-
-GitHub Workflow (cloud)
-│
-▼
-GitHub-Hosted Runner (ephemeral)
-│
-│ Requests OIDC token from GitHub
-▼
-GitHub OIDC Token
-│
-▼
-AWS IAM Role (Trusts GitHub OIDC)
-│
-│ sts:AssumeRoleWithWebIdentity
-▼
-AWS Temporary Credentials
-│
-▼
-AWS Resources (EKS, S3, ECR, etc.)
-
-````
+* Infrastructure as Code (IaC) using Terraform
+* Amazon EKS Cluster Deployment
+* GitHub Actions CI/CD Pipeline
+* GitHub OIDC Authentication
+* Remote Terraform State (Amazon S3)
+* Terraform State Locking (Amazon DynamoDB)
+* Bastion Host Configuration
+* AWS Systems Manager (SSM) Session Manager
+* Production-ready modular Terraform structure
 
 ---
 
-## Step-by-Step Flow
+## 🛠️ Technology Stack
 
-1. **GitHub Workflow Execution**  
-   Workflow starts on a **GitHub-hosted runner**. Runner has **no AWS credentials** by default.
+* Terraform
+* Amazon EKS
+* Amazon VPC
+* IAM
+* Amazon EC2
+* Amazon S3
+* Amazon DynamoDB
+* GitHub Actions
+* GitHub OIDC
+* AWS CLI
+* kubectl
+* AWS Systems Manager (SSM)
 
-2. **Request OIDC Token**  
-   Runner requests a **token** from GitHub. Token contains claims such as:  
-   - `aud`: `sts.amazonaws.com`  
-   - `sub`: repository and branch information
+---
 
-3. **Assume IAM Role**  
-   Runner calls `sts:AssumeRoleWithWebIdentity` using the OIDC token. Example IAM role trust policy:
+## 📂 Repository Structure
+
+```text
+.
+├── .github
+│   └── workflows
+│       └── terraform-eks.yml
+├── assets
+│   └── Presentation1.gif
+├── backend.tf
+├── provider.tf
+├── versions.tf
+├── main.tf
+├── variables.tf
+├── outputs.tf
+├── dev.tfvars
+├── prod.tfvars
+├── modules
+│   ├── vpc
+│   ├── eks
+│   ├── iam
+│   └── bastion
+└── README.md
+```
+
+---
+
+# 🔐 GitHub-Hosted Runner with AWS OIDC Flow
+
+When using **GitHub-hosted runners**, the runners are ephemeral and **do not have AWS credentials** by default.
+
+Instead of storing AWS Access Keys in GitHub Secrets, the workflow authenticates using **GitHub OpenID Connect (OIDC)** and assumes an AWS IAM Role.
+
+This approach follows AWS security best practices.
+
+---
+
+## Architecture
+
+```text
+GitHub Workflow
+       │
+       ▼
+GitHub Hosted Runner
+       │
+       │ Request OIDC Token
+       ▼
+GitHub OIDC Provider
+       │
+       ▼
+AWS IAM Role
+       │
+       │ AssumeRoleWithWebIdentity
+       ▼
+Temporary AWS Credentials
+       │
+       ▼
+AWS Resources
+(EKS, S3, ECR, IAM, DynamoDB)
+```
+
+---
+
+## Authentication Flow
+
+### Step 1 – Workflow Execution
+
+The GitHub Actions workflow starts on a GitHub-hosted runner.
+
+The runner has **no AWS credentials** initially.
+
+---
+
+### Step 2 – Request OIDC Token
+
+The runner requests an identity token from GitHub.
+
+The token contains claims such as:
+
+* Audience (`aud`)
+* Repository (`sub`)
+* Branch
+* Workflow
+
+---
+
+### Step 3 – Assume IAM Role
+
+AWS validates the OIDC token and allows the runner to assume the configured IAM Role.
+
+Example IAM Trust Policy:
 
 ```json
 {
@@ -72,42 +143,48 @@ AWS Resources (EKS, S3, ECR, etc.)
   "Condition": {
     "StringEquals": {
       "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-      "token.actions.githubusercontent.com:sub": "repo:username/repo:ref:refs/heads/main"
+      "token.actions.githubusercontent.com:sub": "repo:username/repository:ref:refs/heads/main"
     }
   }
 }
-````
-
-4. **Temporary AWS Credentials**
-   AWS returns **temporary credentials** (Access Key, Secret, Session Token). Credentials are valid **for a short period**.
-
-5. **Access AWS Resources**
-   Runner can now access AWS resources within the permissions of the IAM role. Permissions are **limited**.
+```
 
 ---
 
-## Key Points
+### Step 4 – Temporary Credentials
 
-| Feature                 | GitHub-Hosted Runner               |
-| ----------------------- | ---------------------------------- |
-| Runner location         | GitHub cloud (ephemeral)           |
-| AWS credentials         | None by default                    |
-| Auth method             | OIDC token                         |
-| IAM Role trust          | GitHub OIDC provider               |
-| Temporary credentials   | Issued by AWS STS                  |
-| Lifetime of credentials | Short-lived                        |
-| Typical use case        | CI/CD pipelines, ephemeral runners |
+AWS Security Token Service (STS) issues temporary credentials.
+
+These credentials include:
+
+* Access Key
+* Secret Access Key
+* Session Token
+
+The credentials are valid only for a limited duration.
 
 ---
 
-## Verification
+### Step 5 – Access AWS Resources
 
-Example GitHub Actions workflow step:
+Terraform uses the temporary credentials to provision AWS infrastructure such as:
+
+* Amazon EKS
+* Amazon VPC
+* IAM Roles
+* Amazon S3
+* Amazon DynamoDB
+
+---
+
+## Verify Authentication
+
+GitHub Actions example:
 
 ```yaml
 steps:
-  - name: Configure AWS Credentials via OIDC
-    uses: aws-actions/configure-aws-credentials@v2
+  - name: Configure AWS Credentials
+    uses: aws-actions/configure-aws-credentials@v5
     with:
       role-to-assume: arn:aws:iam::<account-id>:role/github-oidc-role
       aws-region: us-east-1
@@ -116,63 +193,115 @@ steps:
     run: aws sts get-caller-identity
 ```
 
-Expected output:
+Expected Output:
 
 ```json
 {
-    "Arn": "arn:aws:iam::<account-id>:role/github-oidc-role",
-    "UserId": "...",
-    "Account": "<account-id>"
+  "Arn": "arn:aws:iam::<account-id>:role/github-oidc-role",
+  "Account": "<account-id>"
 }
 ```
 
 ---
 
-| Feature             | GitHub-Hosted Runner                                                 | Self-Hosted Runner                                    |
-| ------------------- | -------------------------------------------------------------------- | ----------------------------------------------------- |
-| Location            | GitHub cloud (ephemeral)                                             | Your own VM or EC2                                    |
-| IAM Authentication  | OIDC token → assume role                                             | Needs instance IAM role or AWS credentials configured |
-| kubeconfig          | Configured in workflow using `aws-actions/configure-aws-credentials` | You must provide access manually                      |
-| Default Permissions | Temporary, scoped to workflow                                        | Depends on IAM role/permissions on the host machine   |
+## GitHub Hosted vs Self Hosted Runner
 
-
----
-# 🛡️ Bastion Host Setup on AWS (SSH + SSM) --- Step-by-Step
-
-This guide explains how to access EC2 instances using a **Bastion Host**
-in two ways:
-
-1.  🔐 SSH using Key Pair\
-2.  ✅ AWS SSM Session Manager (No SSH, No Key --- Recommended)
-
-It also includes **Terraform examples** and **verification steps**.
+| Feature        | GitHub Hosted Runner | Self Hosted Runner       |
+| -------------- | -------------------- | ------------------------ |
+| Location       | GitHub Cloud         | Customer Managed         |
+| Authentication | OIDC                 | IAM Role / Access Keys   |
+| Credentials    | Temporary            | Long-lived or IAM Role   |
+| Security       | High                 | Depends on configuration |
+| Maintenance    | None                 | User Managed             |
 
 ---
 
-## 🧱 Architecture
+# 📦 Terraform Remote Backend
 
-    Your Laptop
-        |
-        | (SSH / SSM)
-        v
-    [Bastion Host - Public Subnet]
-        |
-        | (SSH or SSM)
-        v
-    [Private EC2 - Private Subnet]
+Terraform state is stored remotely using:
 
-#### Bastion Using AWS SSM (NO SSH, NO KEY) ✅ BEST PRACTICE
+* Amazon S3 Bucket
+* Amazon DynamoDB for State Locking
 
-### ✔ Benefits
+### Benefits
 
--   No inbound rules
--   No key pairs
--   IAM controlled
--   Logged in CloudTrail
+* Shared Terraform State
+* Prevents concurrent modifications
+* State Versioning
+* Team Collaboration
+* Secure Remote Storage
 
-### 1. IAM Role for EC2 (Terraform)
+---
 
-``` hcl
+# 🚀 Deployment Workflow
+
+```text
+Developer
+     │
+     ▼
+GitHub Push
+     │
+     ▼
+GitHub Actions
+     │
+     ▼
+Terraform Init
+     │
+     ▼
+Terraform Validate
+     │
+     ▼
+Terraform Plan
+     │
+     ▼
+Terraform Apply
+     │
+     ▼
+Amazon EKS Cluster
+```
+
+---
+
+# 🛡️ Bastion Host Setup (SSH + AWS SSM)
+
+This project supports two methods for accessing EC2 instances.
+
+## Option 1 – SSH using Key Pair
+
+Traditional SSH access through a Bastion Host.
+
+---
+
+## Option 2 – AWS Systems Manager (Recommended)
+
+Benefits:
+
+* No Public SSH Access
+* No Key Pair Management
+* IAM Controlled Access
+* CloudTrail Auditing
+* Enhanced Security
+
+---
+
+## Architecture
+
+```text
+Developer Laptop
+       │
+       │ SSH / SSM
+       ▼
+Bastion Host (Public Subnet)
+       │
+       ▼
+Private EC2 Instance
+```
+
+---
+
+## IAM Role for SSM
+
+```hcl
 resource "aws_iam_role" "ec2_ssm_role" {
   name = "ec2-ssm-role"
 
@@ -180,7 +309,9 @@ resource "aws_iam_role" "ec2_ssm_role" {
     Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
       Action = "sts:AssumeRole"
     }]
   })
@@ -190,30 +321,15 @@ resource "aws_iam_role_policy_attachment" "ssm_attach" {
   role       = aws_iam_role.ec2_ssm_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
-
-resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "ec2-ssm-profile"
-  role = aws_iam_role.ec2_ssm_role.name
-}
-```
-
-
-### 2. Attach Role to Bastion EC2
-
-``` hcl
-resource "aws_instance" "bastion" {
-  ...
-  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
-}
 ```
 
 ---
 
-### 3. Bastion Security Group (SSM)
+## Bastion Security Group
 
-Only egress needed:
+Only outbound traffic is required.
 
-``` hcl
+```hcl
 egress {
   from_port   = 0
   to_port     = 0
@@ -222,53 +338,92 @@ egress {
 }
 ```
 
-No ingress required ✅
+No inbound rules are required when using AWS Systems Manager.
 
 ---
 
-### 4. Connect Using Console
+## Connect Using AWS CLI
 
-EC2 → Instances → Select Bastion → Connect → Session Manager → Connect
-
----
-
-### 5. Connect Using AWS CLI
-
-``` bash
-aws ssm start-session --target i-xxxxxxxxxxxxx
+```bash
+aws ssm start-session --target <instance-id>
 ```
 
 ---
 
-## 🔐 Private EC2 with SSM (No Bastion Needed)
+## Troubleshooting
 
-You can attach same IAM role to private EC2 and connect directly:
+### SSH Issues
 
--   No public IP
--   No bastion required
--   Works via SSM
+Verify:
 
-Security team preferred architecture.
-
----
-
-## 🧪 Troubleshooting
-
-### ❌ SSH Not Working
-
-Check: - Public IP exists - Port 22 open in SG - Correct username - Key
-pair exists
+* Public IP
+* Security Group allows port 22
+* Correct Key Pair
+* Correct SSH username
 
 ---
 
-### ❌ Session Manager Not Working
+### Session Manager Issues
 
-Check: - IAM role attached - Policy: AmazonSSMManagedInstanceCore -
-Instance has internet or VPC endpoints - SSM agent running
+Verify:
 
-``` bash
+* IAM Role attached
+* AmazonSSMManagedInstanceCore policy attached
+* SSM Agent is running
+* Internet access or VPC Endpoints available
+
+```bash
 sudo systemctl status amazon-ssm-agent
 ```
 
 ---
 
+# ▶️ Deploy Infrastructure
+
+Initialize Terraform:
+
+```bash
+terraform init
+```
+
+Validate configuration:
+
+```bash
+terraform validate
+```
+
+Generate execution plan:
+
+```bash
+terraform plan -var-file=dev.tfvars
+```
+
+Deploy infrastructure:
+
+```bash
+terraform apply -var-file=dev.tfvars
+```
+
+---
+
+# 🧹 Destroy Infrastructure
+
+```bash
+terraform destroy -var-file=dev.tfvars
+```
+
+---
+
+# 📸 Demo
+
+![EKS Deployment](assets/Presentation1.gif)
+
+---
+
+# 📚 References
+
+* Terraform Documentation
+* Amazon EKS Documentation
+* GitHub Actions Documentation
+* AWS IAM OIDC Documentation
+* AWS Systems Manager Documentation
